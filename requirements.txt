@@ -1,0 +1,24 @@
+# Core web framework (replaces Spring Boot)
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# Database ORM (replaces JPA + MySQL)
+sqlalchemy>=2.0.30
+
+# HTTP client (replaces TestRestTemplate)
+requests>=2.32.2
+httpx>=0.27.0
+
+# Pact contract testing (replaces pact-jvm-consumer-junit5 / pact-jvm-provider)
+# pactman = pure Python, NO Ruby binaries, NO Windows 260-char path limit issues
+pactman
+
+# Testing
+pytest>=8.2.0
+pytest-asyncio>=0.23.7
+
+# Pydantic — no version pin so pip picks the latest version that has
+# a pre-built wheel for YOUR Python version (3.13).
+# pydantic==2.7.1 was removed because pydantic-core==2.18.2 has no Python 3.13
+# wheel and requires Rust + MSVC link.exe to compile from source.
+pydantic>=2.9.0

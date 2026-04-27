@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# SQLite databases (runtime files, recreated automatically on startup)
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+
+# Test reports
+reports/
+*.html
+
+# Keep the pacts/ folder so contract JSON is visible in GitHub
+# (In real projects, pacts are published to PactFlow and not committed)
