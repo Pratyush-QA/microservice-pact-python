@@ -212,7 +212,7 @@ def provider_server():
     Starts the real Courses service and waits until it responds.
     Scope="module" means it starts once for all tests in this file.
 
-    If port 8181 is already in use (e.g. from a previous run or a manually
+    If port 8181 is already in use (e.g., from a previous run or a manually
     started service), we skip starting a new one and use the existing server.
     """
     server = None
@@ -328,7 +328,7 @@ def test_pact_provider(provider_server, state_server):
             # For each interaction in the contract:
             #   a. Pactman POSTs {"state": "..."} to state_server → DB set up
             #   b. pactman sends the request to provider_server → real response
-            #   c. Pactman compares real response vs contract spec → PASS/FAIL
+            #   c. Pactman compares real response vs. contract spec → PASS/FAIL
             interaction.verify(
                 provider_server,                        # "http://127.0.0.1:8181"
                 f"{state_server}/_pact/provider_states", # "http://127.0.0.1:8182/..."

@@ -58,12 +58,13 @@ microservice-pact-python/
 │
 ├── tests/
 │   ├── consumer/
-│   │   └── test_pact_consumer.py   # ⭐ Defines the contract + consumer tests
+│   │   ├── conftest.py             # ⭐ Auto-publishes contract to PactFlow after tests pass
+│   │   └── test_pact_consumer.py  # ⭐ Defines the contract + consumer tests
 │   └── provider/
-│       └── test_pact_provider.py   # ⭐ Verifies provider against contract
+│       └── test_pact_provider.py  # ⭐ Verifies provider against contract
 │
 ├── scripts/
-│   └── publish_pact.py     # Publishes contract JSON to PactFlow
+│   └── publish_pact.py     # Manual publish fallback (optional)
 │
 ├── pacts/
 │   └── BooksCatalogue-CoursesCatalogue-pact.json  # Generated contract
@@ -123,10 +124,10 @@ export PACT_BROKER_TOKEN=your-token-here
 
 ## Running the Tests — Step by Step
 
-### Step 1: Run Consumer Tests
+### Step 1: Run Consumer Tests _(auto-publishes contract to PactFlow)_
 
 Defines what BooksCatalogue expects from CoursesCatalogue.
-Generates the contract JSON locally. No real provider service needed.
+Generates the contract JSON locally and **automatically publishes it to PactFlow** — no separate publish command needed.
 
 ```bash
 pytest tests/consumer/ -v
@@ -134,10 +135,17 @@ pytest tests/consumer/ -v
 
 **Expected output:**
 ```
-tests/consumer/test_pact_consumer.py::test_all_courses_price_sum           PASSED
+tests/consumer/test_pact_consumer.py::test_all_courses_price_sum             PASSED
 tests/consumer/test_pact_consumer.py::test_get_product_details_course_exists PASSED
 tests/consumer/test_pact_consumer.py::test_get_product_details_course_not_exist PASSED
 3 passed
+
+[PactFlow] Auto-publishing contract...
+  Consumer : BooksCatalogue
+  Provider : CoursesCatalogue
+  Version  : 1.0.0
+[PactFlow] ✅ Contract published successfully!
+  View at: https://deepintent.pactflow.io/pacts/provider/CoursesCatalogue/consumer/BooksCatalogue/latest
 ```
 
 **What happens internally:**
@@ -149,37 +157,22 @@ TestClient.get("/getProductPrices")
     → mock returns 3 items × price=10
     → app.py: sum = 30
     → assert coursesPrice == 30  ✅
+
+After all tests pass → conftest.py pytest_sessionfinish hook fires
+    → contract JSON published to PactFlow automatically ✅
 ```
 
 Contract JSON written to: `pacts/BooksCatalogue-CoursesCatalogue-pact.json`
 
----
-
-### Step 2: Publish Contract to PactFlow
-
-Uploads the contract to the cloud broker so the provider team can access it from anywhere.
-
-```bash
-python scripts/publish_pact.py
-```
-
-**Expected output:**
-```
-Publishing contract to PactFlow...
-  Consumer : BooksCatalogue
-  Provider : CoursesCatalogue
-  Version  : 1.0.0
-  Broker   : https://deepintent.pactflow.io
-
-[SUCCESS] Contract published successfully!
-  View at: https://deepintent.pactflow.io/pacts/provider/CoursesCatalogue/consumer/BooksCatalogue/latest
-```
+> 💡 **How auto-publish works:** `tests/consumer/conftest.py` uses pytest's `pytest_sessionfinish` hook.
+> It runs after every test session and publishes only when all tests pass and `PACT_BROKER_TOKEN` is set.
+> To publish manually (optional fallback): `python scripts/publish_pact.py`
 
 View the contract at: **https://deepintent.pactflow.io**
 
 ---
 
-### Step 3: Run Provider Tests
+### Step 2: Run Provider Tests
 
 Fetches the contract from PactFlow and verifies the REAL CoursesCatalogue service satisfies it.
 
@@ -191,8 +184,8 @@ pytest tests/provider/ -v -s
 ```
 tests/provider/test_pact_provider.py::test_pact_provider
   Consumer: BooksCatalogue
-  Setting up provider state 'courses exist'     → PASSED ✅
-  Setting up provider state 'Course Appium exist' → PASSED ✅
+  Setting up provider state 'courses exist'               → PASSED ✅
+  Setting up provider state 'Course Appium exist'         → PASSED ✅
   Setting up provider state 'Course Appium does not exist' → PASSED ✅
 1 passed
 ```
@@ -211,7 +204,7 @@ pactman fetches contract from PactFlow
 
 ---
 
-### Step 4: (Optional) Run Both Services Manually
+### Step 3: (Optional) Run Both Services Manually
 
 You can also run both services and hit the endpoints in a browser:
 
@@ -291,6 +284,9 @@ Verification:        GET /getCourseByName/Appium → real 404 → matches contra
 | `Pact file not found` | Run consumer tests first: `pytest tests/consumer/ -v` |
 | `Port 8181 already in use` | Existing server detected and reused automatically |
 | `FileNotFoundError pactman-verify` | Not applicable — we use pactman Python API directly |
+| `[PactFlow] Skipping auto-publish — PACT_BROKER_TOKEN not set` | Set token before running: `$env:PACT_BROKER_TOKEN = "..."` |
+| Auto-publish not triggering | Check if tests are passing — publish only fires on exitstatus=0 |
+| Want to publish without running tests | Run manually: `python scripts/publish_pact.py` |
 
 ---
 
