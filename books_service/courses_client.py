@@ -22,7 +22,7 @@ def get_all_courses(base_url=None):
     Calls GET /allCourseDetails on the Courses service.
     Returns: [{course_name, id, price, category}, ...]
 
-    base_url is only passed directly in Pact tests.
+    Base_url is only passed directly in Pact tests.
     In production (called from app.py), base_url is None so BASE_URL is used.
     BASE_URL is patched in Pact tests to point at the mock server.
     """
@@ -38,7 +38,7 @@ def get_course_by_name(name: str, base_url=None):
     Returns: {course_name, id, price, category}
     Returns None if the course does not exist (404).
 
-    base_url is only passed directly in Pact tests.
+    Base_url is only passed directly in Pact tests.
     In production (called from app.py), base_url is None so BASE_URL is used.
     BASE_URL is patched in Pact tests to point at the mock server.
     """

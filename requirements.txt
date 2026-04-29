@@ -19,6 +19,5 @@ pytest-asyncio>=0.23.7
 
 # Pydantic — no version pin so pip picks the latest version that has
 # a pre-built wheel for YOUR Python version (3.13).
-# pydantic==2.7.1 was removed because pydantic-core==2.18.2 has no Python 3.13
 # wheel and requires Rust + MSVC link.exe to compile from source.
 pydantic>=2.9.0

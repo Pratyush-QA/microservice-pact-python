@@ -11,8 +11,8 @@ HOW IT WORKS:
             and what response it expects from the provider.
 
   Step 2 — Start Pact mock server:
-            'with pact:' starts a real HTTP server on port 9999.
-            This mock server is pre-loaded with the contract you defined in Step 1.
+            'with pact': starts a real HTTP server on port 9999.
+            This mock server is preloaded with the contract you defined in Step 1.
             It knows: "when GET /allCourseDetails arrives → respond with mock data"
             The real CoursesCatalogue service does NOT need to be running.
 
@@ -24,7 +24,7 @@ HOW IT WORKS:
             Now when app.py internally calls get_all_courses() or
             get_course_by_name(), those HTTP calls go to the mock server.
             app.py code is NEVER changed — only BASE_URL is redirected.
-            When 'with patch' block exits, BASE_URL goes back to original.
+            When 'with patch' block exits, BASE_URL goes back to the original.
 
   Step 4 — Call the actual consumer service endpoint (via TestClient):
             'client.get("/getProductPrices")' calls the real app.py endpoint.
@@ -32,10 +32,10 @@ HOW IT WORKS:
             This is correct — we test the real consumer code end-to-end,
             not the HTTP client (courses_client.py) in isolation.
 
-  Step 5 — 'with pact:' block exits:
+  Step 5 — 'with pact': block exits:
             Mock server stops.
             Pact checks all registered interactions were actually called.
-            If yes → writes contract to pacts/BooksCatalogue-CoursesCatalogue.json
+            If yes, → writes contract to pacts/BooksCatalogue-CoursesCatalogue.json
 
   Step 6 — Assert consumer behaviour:
             Verify the consumer endpoint produced correct output.
@@ -54,9 +54,9 @@ WHY patch BASE_URL instead of passing mock URL to app.py?
 IMPORTANT — ALL FIELDS IN MOCK RESPONSE:
 ─────────────────────────────────────────
   The mock must include ALL fields the real provider returns, not just
-  the ones the consumer uses. Otherwise the contract is incomplete and
+  the ones the consumer uses. Otherwise, the contract is incomplete and
   provider verification will fail.
-  Real response: {course_name, id, price, category} — all 4 must be in mock.
+  Real response: {course_name, id, price, category} — all 4 must-be in mock.
 """
 
 from unittest.mock import patch
@@ -74,7 +74,7 @@ client = TestClient(app)
 # ── Pact setup ─────────────────────────────────────────────────────────────────
 # Consumer("BooksCatalogue")  → name of this service (consumer)
 # Provider("CoursesCatalogue") → name of the service we depend on (provider)
-# pact_dir → folder where the contract JSON file will be saved after tests pass
+# pact_dir → folder where the contract JSON file will be saved after tests passed
 # port     → port number on which Pact mock server will run during tests
 PACT_DIR  = "pacts"
 MOCK_PORT = 9999
@@ -134,12 +134,12 @@ def test_all_courses_price_sum():
                 200,
                 body=EachLike(
                     {
-                        "course_name": Like("Selenium"),   # any string
+                        "course_name": Like("Selenium"),    # any string
                         "id":          Like("3"),           # any string
                         "price":       Like(10),            # any integer
                         "category":    Like("web"),         # any string
                     },
-                    minimum=3                               # at least 3 items in array
+                    minimum=3                               # at least 3 items in an array
                 )
             )
     )
@@ -174,7 +174,7 @@ def test_all_courses_price_sum():
             # client.get("/getProductPrices") calls app.py's real endpoint.
             # app.py internally calls get_all_courses() → courses_client.py
             # courses_client.py makes HTTP call → lands on Pact mock server
-            # mock server responds with 3 items of price=10
+            # responds with 3 items of price=10
             # app.py sums them up and returns the combined result
             response = client.get("/getProductPrices")
 
@@ -223,7 +223,7 @@ def test_get_product_details_course_exists():
             .will_respond_with(
                 200,
                 body={
-                    "course_name": Like("Appium"),    # any string
+                    "course_name": Like("Appium"),     # any string
                     "id":          Like("12"),         # any string
                     "price":       Like(44),           # any integer
                     "category":    Like("mobile"),     # any string

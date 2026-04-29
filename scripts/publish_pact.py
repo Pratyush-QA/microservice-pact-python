@@ -6,7 +6,7 @@ This script uploads the consumer contract JSON to the cloud Pact Broker
 
 WHY publish to a cloud broker?
   In a team setup, the contract must not be a local file. If it is:
-    - Provider team cannot access it
+    - a Provider team cannot access it
     - CI/CD cannot access it
     - No visibility into which consumers depend on which providers
 
@@ -35,7 +35,7 @@ HOW TO GET THE TOKEN:
 CONSUMER VERSION:
   In production, this is typically the git commit hash or build number.
   Here we use a simple version string, overridable via CONSUMER_VERSION env var.
-  Example: $env:CONSUMER_VERSION = "abc1234"  (use git commit hash in CI)
+  Example: $env:CONSUMER_VERSION = "abc1234" (use git commit hash in CI)
 """
 
 import json

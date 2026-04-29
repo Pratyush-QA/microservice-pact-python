@@ -10,9 +10,9 @@ HOW PACT PROVIDER TESTING WORKS (with cloud broker):
          python scripts/publish_pact.py
   3. This test starts the REAL Courses service (FastAPI on port 8181).
   4. A state server is started on port 8182 — it sets up the DB before each interaction.
-  5. pactman fetches ALL contracts for "CoursesCatalogue" from PactFlow and
+  5. Pactman fetches ALL contracts for "CoursesCatalogue" from PactFlow and
      replays every interaction:
-       - Calls the state server to set up DB (e.g. insert/delete Appium record)
+       - Calls the state server to set up DB (e.g., insert/delete Appium record)
        - Sends the exact request from the contract to the real service
        - Checks the real response matches what the consumer defined
   6. If all interactions pass → Provider satisfies the contract ✅
@@ -39,7 +39,7 @@ WHY STATE HANDLERS?
   records before each interaction runs.
 
 WHY A SEPARATE STATE SERVER (port 8182)?
-  pactman sends HTTP POST to this server before each interaction.
+  Pactman sends HTTP POST to this server before each interaction.
   The server calls the matching state handler function.
 """
 
@@ -124,7 +124,7 @@ def state_courses_exist():
     Deletes all existing rows and reinserts 3 fresh courses.
 
     WHY delete-then-insert instead of "insert if empty"?
-      pactman has a bug: when verifying EachLike arrays, it applies the
+      Pactman has a bug: when verifying EachLike arrays, it applies the
       array's 'min' constraint as a string length check on individual fields.
       Short IDs like "2" or "12" (length < 3) fail this check with min=3.
       Fix: use IDs with at least 3 characters ("c02", "c03", "c12").
@@ -210,7 +210,7 @@ async def provider_states(request: _Request):
 def provider_server():
     """
     Starts the real Courses service and waits until it responds.
-    scope="module" means it starts once for all tests in this file.
+    Scope="module" means it starts once for all tests in this file.
 
     If port 8181 is already in use (e.g. from a previous run or a manually
     started service), we skip starting a new one and use the existing server.
@@ -218,7 +218,7 @@ def provider_server():
     server = None
 
     if _port_in_use(PROVIDER_PORT):
-        # Port is already occupied — assume the Courses service is running there.
+        # The Port is already occupied — assume the Courses service is running there.
         print(f"\n[provider_server] Port {PROVIDER_PORT} already in use — using existing server.")
     else:
         # Port is free — start our own Courses service in a background thread.
@@ -236,7 +236,7 @@ def provider_server():
 
     yield f"http://127.0.0.1:{PROVIDER_PORT}"
 
-    # Only stop if we started it; don't kill an externally-started server
+    # Only stop if we started it; don't kill an externally started server
     if server:
         server.stop()
 
@@ -245,7 +245,7 @@ def provider_server():
 def state_server():
     """
     Starts the state-setup server on port 8182.
-    pactman will POST to this before each interaction.
+    Pactman will POST to this before each interaction.
     """
     class StateServer(threading.Thread):
         def __init__(self):
@@ -275,18 +275,18 @@ def test_pact_provider(provider_server, state_server):
       pactman → PactFlow API → downloads contract JSON(s)
                → for each consumer (BooksCatalogue, ...):
                    → for each interaction in contract:
-                       a. POST state to state_server → DB set up
+                       a. POST-state to state_server → DB set up
                        b. Send request to provider_server → real response
-                       c. Compare real response vs contract → PASS / FAIL
+                       c. Compare real response vs. contract → PASS / FAIL
 
     BEFORE RUNNING THIS TEST:
       1. Run consumer tests:    pytest tests/consumer/ -v
       2. Publish to PactFlow:   python scripts/publish_pact.py
-      3. Set token env var:     $env:PACT_BROKER_TOKEN = "your-token"
+      3. Set token env var: $env:PACT_BROKER_TOKEN = "your-token"
       4. Run this test:         pytest tests/provider/ -v -s
 
     If this passes → consumer and provider are compatible ✅
-    If this fails  → provider changed something that breaks the consumer ❌
+    If this fails → provider changed something that breaks the consumer ❌
     """
     from pactman.verifier.broker_pact import BrokerPacts, PactBrokerConfig
     from pactman.verifier.result import CaptureResult
@@ -305,7 +305,7 @@ def test_pact_provider(provider_server, state_server):
 
     # PactBrokerConfig connects to PactFlow using the bearer token.
     # It fetches all consumer pacts published for the given provider.
-    # url   = PactFlow account URL
+    # Url = PactFlow account URL
     # token = bearer token from PactFlow (read from env var, never hardcoded)
     broker_config = PactBrokerConfig(
         url=PACT_BROKER_URL,
@@ -326,9 +326,9 @@ def test_pact_provider(provider_server, state_server):
         print(f"\n  Verifying pact: {pact.consumer} → {pact.provider}")
         for interaction in pact.interactions:
             # For each interaction in the contract:
-            #   a. pactman POSTs {"state": "..."} to state_server → DB set up
+            #   a. Pactman POSTs {"state": "..."} to state_server → DB set up
             #   b. pactman sends the request to provider_server → real response
-            #   c. pactman compares real response vs contract spec → PASS/FAIL
+            #   c. Pactman compares real response vs contract spec → PASS/FAIL
             interaction.verify(
                 provider_server,                        # "http://127.0.0.1:8181"
                 f"{state_server}/_pact/provider_states", # "http://127.0.0.1:8182/..."

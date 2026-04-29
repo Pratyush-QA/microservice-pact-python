@@ -5,10 +5,10 @@ This is the CONSUMER service. It manages book data and calls the
 CoursesCatalogue service to fetch course pricing information.
 
 Endpoints:
-  POST /addBook                  → add a new book to the database
-  GET  /getBooks/{id}            → get a book by its ID
-  GET  /getProductPrices         → total books price + total courses price (calls Courses service)
-  GET  /getProductDetails/{name} → book details combined with course price and category
+  POST /addBook → add a new book to the database
+  GET /getBooks/{id} → get a book by its ID
+  GET /getProductPrices → total books price + total courses price (calls Courses service)
+  GET /getProductDetails/{name} → book details combined with course price and category
 
 Database:
   SQLite (file: books.db) — auto-created on first run, no setup needed.
