@@ -330,6 +330,9 @@ Verification:        GET /getCourseByName/Appium → real 404 → matches contra
 ### PactFlow — Contract Interactions Detail
 ![PactFlow Contract](test-reports/screenshots/pactflow-contract.png)
 
+### PactFlow — All 3 Interactions Verified (with Matching Rules)
+![PactFlow Contract Detail](test-reports/screenshots/pactflow-contract-detail.png)
+
 ---
 
 ## Interview Reference — Key Talking Points
