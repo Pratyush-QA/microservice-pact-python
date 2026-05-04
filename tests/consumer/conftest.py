@@ -105,14 +105,34 @@ def pytest_sessionfinish(session, exitstatus):
 
     print(f"[PactFlow] ✅ Contract published successfully!")
 
-    # Tag version with branch — enables "main branch version" on PactFlow dashboard
-    tag_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{version}/tags/{branch}"
-    tag_res  = requests.put(tag_url, headers=headers)
-
-    if tag_res.status_code in (200, 201):
-        print(f"[PactFlow] ✅ Version tagged as branch '{branch}'")
+    # ── Set branch on version (modern PactFlow "branches" API) ──────────────────
+    # This is what powers the "main branch version" badge on the Applications dashboard.
+    # The old /tags/ API creates tags — the new PATCH API sets the branch field directly.
+    branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{version}"
+    branch_res = requests.patch(
+        branch_url,
+        json={"branch": branch},
+        headers={**headers, "Content-Type": "application/merge-patch+json"},
+    )
+    if branch_res.status_code in (200, 201):
+        print(f"[PactFlow] ✅ Version branch set to '{branch}'")
     else:
-        print(f"[PactFlow] ⚠ Branch tagging failed (non-critical): HTTP {tag_res.status_code}")
+        print(f"[PactFlow] ⚠ Branch set failed: HTTP {branch_res.status_code} — {branch_res.text}")
+
+    # ── Set mainBranch on pacticipant (one-time, idempotent) ─────────────────
+    # Tells PactFlow which branch is "main" so the Applications dashboard
+    # can display "main branch version: 1.0.0" instead of "not found".
+    for participant in [consumer, provider]:
+        mb_url = f"{PACT_BROKER_URL}/pacticipants/{participant}"
+        mb_res = requests.patch(
+            mb_url,
+            json={"mainBranch": branch},
+            headers={**headers, "Content-Type": "application/merge-patch+json"},
+        )
+        if mb_res.status_code in (200, 201):
+            print(f"[PactFlow] ✅ mainBranch set to '{branch}' for {participant}")
+        else:
+            print(f"[PactFlow] ⚠ mainBranch set failed for {participant}: HTTP {mb_res.status_code}")
 
     print(
         f"  View at: {PACT_BROKER_URL}/pacts/provider/"

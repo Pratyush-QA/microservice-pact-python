@@ -127,15 +127,31 @@ if response.status_code not in (200, 201):
 
 print(f"[SUCCESS] Contract published successfully!")
 
-# ── Tag the version with branch name ─────────────────────────────────────────
-# This enables the "main branch version" indicator on PactFlow dashboard
-# and powers the compatibility matrix "can-i-deploy" checks per branch.
-tag_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{CONSUMER_VERSION}/tags/{CONSUMER_BRANCH}"
-tag_response = requests.put(tag_url, headers={**headers, "Content-Type": "application/json"})
-
-if tag_response.status_code in (200, 201):
-    print(f"[SUCCESS] Version tagged as branch '{CONSUMER_BRANCH}'")
+# ── Set branch on version (modern PactFlow "branches" API) ───────────────────
+# This is what powers the "main branch version" badge on the Applications dashboard.
+branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{CONSUMER_VERSION}"
+branch_response = requests.patch(
+    branch_url,
+    json={"branch": CONSUMER_BRANCH},
+    headers={**headers, "Content-Type": "application/merge-patch+json"},
+)
+if branch_response.status_code in (200, 201):
+    print(f"[SUCCESS] Version branch set to '{CONSUMER_BRANCH}'")
 else:
-    print(f"[WARN] Branch tagging failed (non-critical): HTTP {tag_response.status_code}")
+    print(f"[WARN] Branch set failed: HTTP {branch_response.status_code} — {branch_response.text}")
+
+# ── Set mainBranch on both pacticipants (idempotent, safe to run every time) ─
+# Tells PactFlow which branch is "main" so Applications dashboard shows the badge.
+for participant in [consumer, provider]:
+    mb_url = f"{PACT_BROKER_URL}/pacticipants/{participant}"
+    mb_res = requests.patch(
+        mb_url,
+        json={"mainBranch": CONSUMER_BRANCH},
+        headers={**headers, "Content-Type": "application/merge-patch+json"},
+    )
+    if mb_res.status_code in (200, 201):
+        print(f"[SUCCESS] mainBranch set to '{CONSUMER_BRANCH}' for {participant}")
+    else:
+        print(f"[WARN] mainBranch set failed for {participant}: HTTP {mb_res.status_code}")
 
 print(f"  View at: {PACT_BROKER_URL}/pacts/provider/{provider}/consumer/{consumer}/latest\n")
