@@ -51,12 +51,16 @@ WHY patch BASE_URL instead of passing mock URL to app.py?
   By patching BASE_URL in courses_client.py, the mock server is
   transparently injected — app.py code stays exactly as it is in production.
 
-IMPORTANT — ALL FIELDS IN MOCK RESPONSE:
-─────────────────────────────────────────
-  The mock must include ALL fields the real provider returns, not just
-  the ones the consumer uses. Otherwise, the contract is incomplete and
-  provider verification will fail.
-  Real response: {course_name, id, price, category} — all 4 must-be in mock.
+IMPORTANT — ONLY INCLUDE FIELDS THE CONSUMER ACTUALLY USES:
+─────────────────────────────────────────────────────────────
+  The contract must only include fields this consumer reads in its code.
+  If app.py only does c["price"], only "price" goes in the contract.
+  Provider can return 10 other fields — Pact ignores them, tests still pass.
+  This is the core principle of Consumer-Driven Contract Testing:
+    - Each consumer owns its own contract
+    - Provider is only responsible for satisfying each consumer's specific needs
+    - Unused fields are invisible to this consumer's contract — other consumers
+      can catch changes to those fields via their own contracts
 """
 
 from unittest.mock import patch
@@ -69,6 +73,7 @@ from books_service.app import app
 # TestClient simulates HTTP calls to our consumer service (app.py).
 # It triggers the startup event automatically, which seeds the books DB.
 # No real server is started — TestClient handles everything in memory.
+
 client = TestClient(app)
 
 # ── Pact setup ─────────────────────────────────────────────────────────────────
@@ -126,6 +131,10 @@ def test_all_courses_price_sum():
     #   → match by TYPE only, not exact value
     #   → Like("Selenium") = any string is fine
     #   → Like(10)         = any integer is fine (real price could be 23, 66 etc.)
+    # app.py get_product_prices() only does: sum(c["price"] for c in courses)
+    # It reads ONLY "price" from each course object — nothing else.
+    # So the contract only defines "price". Provider can add/rename/remove
+    # any other field freely — this consumer's tests will not be affected.
     (
         pact.given("courses exist")
             .upon_receiving("getting all courses details")
@@ -134,12 +143,9 @@ def test_all_courses_price_sum():
                 200,
                 body=EachLike(
                     {
-                        "course_name": Like("Selenium"),    # any string
-                        "id":          Like("3"),           # any string
-                        "price":       Like(10),            # any integer
-                        "category":    Like("web"),         # any string
+                        "price": Like(10),   # only field this consumer uses
                     },
-                    minimum=3                               # at least 3 items in an array
+                    minimum=3               # at least 3 items in the array
                 )
             )
     )
@@ -214,8 +220,12 @@ def test_get_product_details_course_exists():
 
     # ── CONTRACT DEFINITION ───────────────────────────────────────────────────
     # Single course object response (not an array like Test 1).
-    # All 4 fields included — course_name and id even though consumer
-    # only uses price and category. Incomplete contract = provider test fails.
+    # app.py get_product_details() reads: course["price"] and course["category"]
+    # ONLY those 2 fields go in the contract.
+    # Provider also returns course_name and id — but this consumer doesn't use
+    # them, so they are NOT in this contract. If provider renames course_name,
+    # this consumer is unaffected. Another consumer that uses course_name
+    # will catch that change via its own contract.
     (
         pact.given("Course Appium exist")
             .upon_receiving("Get the Appium course details")
@@ -223,10 +233,8 @@ def test_get_product_details_course_exists():
             .will_respond_with(
                 200,
                 body={
-                    "course_name": Like("Appium"),     # any string
-                    "id":          Like("12"),         # any string
-                    "price":       Like(44),           # any integer
-                    "category":    Like("mobile"),     # any string
+                    "price":    Like(44),       # consumer uses course["price"]
+                    "category": Like("mobile"), # consumer uses course["category"]
                 }
             )
     )
