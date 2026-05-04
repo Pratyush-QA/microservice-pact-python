@@ -78,6 +78,7 @@ def pytest_sessionfinish(session, exitstatus):
     consumer = pact["consumer"]["name"]   # "BooksCatalogue"
     provider = pact["provider"]["name"]   # "CoursesCatalogue"
     version  = os.environ.get("CONSUMER_VERSION", "1.0.0")
+    branch   = os.environ.get("CONSUMER_BRANCH", "main")
 
     url = (
         f"{PACT_BROKER_URL}/pacts/provider/{provider}"
@@ -93,15 +94,27 @@ def pytest_sessionfinish(session, exitstatus):
     print(f"  Consumer : {consumer}")
     print(f"  Provider : {provider}")
     print(f"  Version  : {version}")
+    print(f"  Branch   : {branch}")
 
     response = requests.put(url, json=pact, headers=headers)
 
-    if response.status_code in (200, 201):
-        print(f"[PactFlow] ✅ Contract published successfully!")
-        print(
-            f"  View at: {PACT_BROKER_URL}/pacts/provider/"
-            f"{provider}/consumer/{consumer}/latest"
-        )
-    else:
+    if response.status_code not in (200, 201):
         print(f"[PactFlow] ❌ Publish failed — HTTP {response.status_code}")
         print(f"  Response: {response.text}")
+        return
+
+    print(f"[PactFlow] ✅ Contract published successfully!")
+
+    # Tag version with branch — enables "main branch version" on PactFlow dashboard
+    tag_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{version}/tags/{branch}"
+    tag_res  = requests.put(tag_url, headers=headers)
+
+    if tag_res.status_code in (200, 201):
+        print(f"[PactFlow] ✅ Version tagged as branch '{branch}'")
+    else:
+        print(f"[PactFlow] ⚠ Branch tagging failed (non-critical): HTTP {tag_res.status_code}")
+
+    print(
+        f"  View at: {PACT_BROKER_URL}/pacts/provider/"
+        f"{provider}/consumer/{consumer}/latest"
+    )
