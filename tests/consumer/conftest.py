@@ -77,7 +77,7 @@ def pytest_sessionfinish(session, exitstatus):
 
     consumer = pact["consumer"]["name"]   # "BooksCatalogue"
     provider = pact["provider"]["name"]   # "CoursesCatalogue"
-    version  = os.environ.get("CONSUMER_VERSION", "1.0.1")
+    version  = os.environ.get("CONSUMER_VERSION", "1.0.2")
     branch   = os.environ.get("CONSUMER_BRANCH", "main")
 
     url = (
@@ -105,23 +105,23 @@ def pytest_sessionfinish(session, exitstatus):
 
     print(f"[PactFlow] ✅ Contract published successfully!")
 
-    # ── Set branch on version (modern PactFlow "branches" API) ──────────────────
-    # This is what powers the "main branch version" badge on the Applications dashboard.
-    # The old /tags/ API creates tags — the new PATCH API sets the branch field directly.
+    # ── Set branch on version — use PUT (create/update) not PATCH ────────────
+    # PUT /pacticipants/{consumer}/versions/{version} is the correct REST
+    # "create or update" endpoint. PATCH was returning 200 but ignoring branch.
     branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{version}"
-    branch_res = requests.patch(
+    branch_res = requests.put(
         branch_url,
         json={"branch": branch},
-        headers={**headers, "Content-Type": "application/merge-patch+json"},
+        headers=headers,
     )
     if branch_res.status_code in (200, 201):
-        print(f"[PactFlow] ✅ Version branch set to '{branch}'")
+        print(f"[PactFlow] ✅ Version branch set to '{branch}' (HTTP {branch_res.status_code})")
     else:
-        print(f"[PactFlow] ⚠ Branch set failed: HTTP {branch_res.status_code} — {branch_res.text}")
+        print(f"[PactFlow] ⚠ Branch PUT failed: HTTP {branch_res.status_code} — {branch_res.text[:300]}")
 
     # ── Set mainBranch on pacticipant (one-time, idempotent) ─────────────────
     # Tells PactFlow which branch is "main" so the Applications dashboard
-    # can display "main branch version: 1.0.0" instead of "not found".
+    # can display "main branch version: 1.0.1" instead of "not found".
     for participant in [consumer, provider]:
         mb_url = f"{PACT_BROKER_URL}/pacticipants/{participant}"
         mb_res = requests.patch(
@@ -130,9 +130,9 @@ def pytest_sessionfinish(session, exitstatus):
             headers={**headers, "Content-Type": "application/merge-patch+json"},
         )
         if mb_res.status_code in (200, 201):
-            print(f"[PactFlow] ✅ mainBranch set to '{branch}' for {participant}")
+            print(f"[PactFlow] ✅ mainBranch='{branch}' for {participant}")
         else:
-            print(f"[PactFlow] ⚠ mainBranch set failed for {participant}: HTTP {mb_res.status_code}")
+            print(f"[PactFlow] ⚠ mainBranch failed for {participant}: HTTP {mb_res.status_code} — {mb_res.text[:300]}")
 
     print(
         f"  View at: {PACT_BROKER_URL}/pacts/provider/"
