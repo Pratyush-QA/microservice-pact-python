@@ -313,6 +313,25 @@ Verification:        GET /getCourseByName/Appium → real 404 → matches contra
 
 ---
 
+## Test Results & Evidence
+
+### Consumer Tests — All 3 Passed ✅
+![Consumer Tests](test-reports/screenshots/consumer-tests-passed.png)
+
+### Provider Tests — All 3 Interactions Verified ✅
+![Provider Tests](test-reports/screenshots/provider-tests-passed.png)
+
+### PactFlow — Compatibility Matrix ✅
+![PactFlow Matrix](test-reports/screenshots/pactflow-matrix.png)
+
+### PactFlow — Contract Dashboard
+![PactFlow Dashboard](test-reports/screenshots/pactflow-dashboard.png)
+
+### PactFlow — Contract Interactions Detail
+![PactFlow Contract](test-reports/screenshots/pactflow-contract.png)
+
+---
+
 ## Interview Reference — Key Talking Points
 
 - **Contract testing vs integration testing**: Contract tests are fast, isolated, no real network calls on consumer side. Integration tests need both services running.
