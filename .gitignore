@@ -27,9 +27,9 @@ Thumbs.db
 .env
 .env.local
 
-# Test reports
+# Test reports — test-reports/ IS committed to show results on GitHub
+# Exclude old reports/ folder and loose html files only
 reports/
-*.html
 
 # Keep the pacts/ folder so contract JSON is visible in GitHub
 # (In real projects, pacts are published to PactFlow and not committed)
