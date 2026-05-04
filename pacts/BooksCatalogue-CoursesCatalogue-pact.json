@@ -17,22 +17,13 @@
         "status": 200,
         "body": [
           {
-            "course_name": "Selenium",
-            "id": "3",
-            "price": 10,
-            "category": "web"
+            "price": 10
           },
           {
-            "course_name": "Selenium",
-            "id": "3",
-            "price": 10,
-            "category": "web"
+            "price": 10
           },
           {
-            "course_name": "Selenium",
-            "id": "3",
-            "price": 10,
-            "category": "web"
+            "price": 10
           }
         ],
         "matchingRules": {
@@ -40,16 +31,7 @@
             "match": "type",
             "min": 3
           },
-          "$.body.course_name": {
-            "match": "type"
-          },
-          "$.body.id": {
-            "match": "type"
-          },
           "$.body.price": {
-            "match": "type"
-          },
-          "$.body.category": {
             "match": "type"
           }
         }
@@ -65,18 +47,10 @@
       "response": {
         "status": 200,
         "body": {
-          "course_name": "Appium",
-          "id": "12",
           "price": 44,
           "category": "mobile"
         },
         "matchingRules": {
-          "$.body.course_name": {
-            "match": "type"
-          },
-          "$.body.id": {
-            "match": "type"
-          },
           "$.body.price": {
             "match": "type"
           },
