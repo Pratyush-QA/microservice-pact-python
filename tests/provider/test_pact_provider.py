@@ -321,19 +321,33 @@ def test_pact_provider(provider_server, state_server):
     # No hardcoded file paths — contracts come from PactFlow.
     pacts = BrokerPacts(PROVIDER_NAME, broker_config, result_factory).consumers()
 
+    # Provider version — in CI use git commit hash; locally use "1.0.0"
+    # Must match the version consumers can see in PactFlow
+    provider_version = os.environ.get("PROVIDER_VERSION", "1.0.0")
+
     success = True
     for pact in pacts:
         print(f"\n  Verifying pact: {pact.consumer} → {pact.provider}")
         for interaction in pact.interactions:
             # For each interaction in the contract:
-            #   a. Pactman POSTs {"state": "..."} to state_server → DB set up
+            #   a. pactman POSTs {"state": "..."} to state_server → DB set up
             #   b. pactman sends the request to provider_server → real response
-            #   c. Pactman compares real response vs. contract spec → PASS/FAIL
+            #   c. pactman compares real response vs contract spec → PASS/FAIL
             interaction.verify(
-                provider_server,                        # "http://127.0.0.1:8181"
-                f"{state_server}/_pact/provider_states", # "http://127.0.0.1:8182/..."
+                provider_server,                          # "http://127.0.0.1:8181"
+                f"{state_server}/_pact/provider_states",  # "http://127.0.0.1:8182/..."
             )
             success = interaction.result.success and success
+
+        # Publish verification result back to PactFlow so the compatibility
+        # matrix shows ✅ Verified instead of ⚠ No verification.
+        # This is what makes PactFlow useful — provider publishes its result
+        # so consumer team can see if their contract is satisfied.
+        try:
+            pact.publish_result(provider_version)
+            print(f"  [PactFlow] ✅ Verification result published (version: {provider_version})")
+        except Exception as e:
+            print(f"  [PactFlow] ⚠ Could not publish verification result: {e}")
 
     assert success, (
         "Pact verification FAILED — provider does not satisfy the consumer contract.\n"
