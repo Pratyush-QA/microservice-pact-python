@@ -77,7 +77,7 @@ def pytest_sessionfinish(session, exitstatus):
 
     consumer = pact["consumer"]["name"]   # "BooksCatalogue"
     provider = pact["provider"]["name"]   # "CoursesCatalogue"
-    version  = os.environ.get("CONSUMER_VERSION", "1.0.0")
+    version  = os.environ.get("CONSUMER_VERSION", "1.0.1")
     branch   = os.environ.get("CONSUMER_BRANCH", "main")
 
     url = (

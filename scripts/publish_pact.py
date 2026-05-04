@@ -53,7 +53,7 @@ PACT_BROKER_TOKEN = os.environ.get("PACT_BROKER_TOKEN")
 
 # Consumer version tag — in CI use git commit hash; for local dev use "1.0.0"
 # Override: $env:CONSUMER_VERSION = "abc1234"
-CONSUMER_VERSION = os.environ.get("CONSUMER_VERSION", "1.0.0")
+CONSUMER_VERSION = os.environ.get("CONSUMER_VERSION", "1.0.1")
 
 # Branch name — tells PactFlow which branch this contract came from.
 # In CI use: os.environ.get("GIT_BRANCH") or parse from git.

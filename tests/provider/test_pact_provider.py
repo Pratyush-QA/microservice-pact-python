@@ -323,7 +323,7 @@ def test_pact_provider(provider_server, state_server):
 
     # Provider version — in CI use git commit hash; locally use "1.0.0"
     # Must match the version consumers can see in PactFlow
-    provider_version = os.environ.get("PROVIDER_VERSION", "1.0.0")
+    provider_version = os.environ.get("PROVIDER_VERSION", "1.0.1")
 
     success = True
     for pact in pacts:
