@@ -77,7 +77,7 @@ def pytest_sessionfinish(session, exitstatus):
 
     consumer = pact["consumer"]["name"]   # "BooksCatalogue"
     provider = pact["provider"]["name"]   # "CoursesCatalogue"
-    version  = os.environ.get("CONSUMER_VERSION", "1.0.2")
+    version  = os.environ.get("CONSUMER_VERSION", "1.0.3")
     branch   = os.environ.get("CONSUMER_BRANCH", "main")
 
     url = (
@@ -105,19 +105,16 @@ def pytest_sessionfinish(session, exitstatus):
 
     print(f"[PactFlow] ✅ Contract published successfully!")
 
-    # ── Set branch on version — use PUT (create/update) not PATCH ────────────
-    # PUT /pacticipants/{consumer}/versions/{version} is the correct REST
-    # "create or update" endpoint. PATCH was returning 200 but ignoring branch.
-    branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{version}"
-    branch_res = requests.put(
-        branch_url,
-        json={"branch": branch},
-        headers=headers,
-    )
+    # ── Associate version with branch (correct Pact Broker branches API) ────
+    # The correct endpoint is: PUT /pacticipants/{name}/branches/{branch}/versions/{version}
+    # The URL structure itself creates the association — no body needed.
+    # Previous attempts (/versions/{v} with {"branch":...}) returned 200 but did nothing.
+    branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/branches/{branch}/versions/{version}"
+    branch_res = requests.put(branch_url, headers=headers)
     if branch_res.status_code in (200, 201):
-        print(f"[PactFlow] ✅ Version branch set to '{branch}' (HTTP {branch_res.status_code})")
+        print(f"[PactFlow] ✅ Version {version} associated with branch '{branch}' (HTTP {branch_res.status_code})")
     else:
-        print(f"[PactFlow] ⚠ Branch PUT failed: HTTP {branch_res.status_code} — {branch_res.text[:300]}")
+        print(f"[PactFlow] ⚠ Branch association failed: HTTP {branch_res.status_code} — {branch_res.text[:300]}")
 
     # ── Set mainBranch on pacticipant (one-time, idempotent) ─────────────────
     # Tells PactFlow which branch is "main" so the Applications dashboard

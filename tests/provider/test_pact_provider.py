@@ -323,7 +323,7 @@ def test_pact_provider(provider_server, state_server):
 
     # Provider version — in CI use git commit hash; locally use "1.0.0"
     # Must match the version consumers can see in PactFlow
-    provider_version = os.environ.get("PROVIDER_VERSION", "1.0.2")
+    provider_version = os.environ.get("PROVIDER_VERSION", "1.0.3")
 
     success = True
     for pact in pacts:
@@ -348,6 +348,30 @@ def test_pact_provider(provider_server, state_server):
             print(f"  [PactFlow] ✅ Verification result published (version: {provider_version})")
         except Exception as e:
             print(f"  [PactFlow] ⚠ Could not publish verification result: {e}")
+
+        # ── Associate provider version with branch ────────────────────────────
+        # Without this, CoursesCatalogue version shows branch=(none) on PactFlow
+        # and "Can I Deploy?" for BooksCatalogue fails with "no versions exist
+        # for this branch" because it looks for a verified provider on main branch.
+        provider_branch = os.environ.get("PROVIDER_BRANCH", "main")
+        branch_url = (
+            f"{PACT_BROKER_URL}/pacticipants/{PROVIDER_NAME}"
+            f"/branches/{provider_branch}/versions/{provider_version}"
+        )
+        try:
+            branch_res = requests.put(
+                branch_url,
+                headers={
+                    "Authorization": f"Bearer {PACT_BROKER_TOKEN}",
+                    "Content-Type": "application/json",
+                },
+            )
+            if branch_res.status_code in (200, 201):
+                print(f"  [PactFlow] ✅ Provider version {provider_version} associated with branch '{provider_branch}'")
+            else:
+                print(f"  [PactFlow] ⚠ Provider branch association: HTTP {branch_res.status_code} — {branch_res.text[:200]}")
+        except Exception as e:
+            print(f"  [PactFlow] ⚠ Provider branch association failed: {e}")
 
     assert success, (
         "Pact verification FAILED — provider does not satisfy the consumer contract.\n"

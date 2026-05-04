@@ -53,7 +53,7 @@ PACT_BROKER_TOKEN = os.environ.get("PACT_BROKER_TOKEN")
 
 # Consumer version tag — in CI use git commit hash; for local dev use "1.0.0"
 # Override: $env:CONSUMER_VERSION = "abc1234"
-CONSUMER_VERSION = os.environ.get("CONSUMER_VERSION", "1.0.2")
+CONSUMER_VERSION = os.environ.get("CONSUMER_VERSION", "1.0.3")
 
 # Branch name — tells PactFlow which branch this contract came from.
 # In CI use: os.environ.get("GIT_BRANCH") or parse from git.
@@ -127,17 +127,15 @@ if response.status_code not in (200, 201):
 
 print(f"[SUCCESS] Contract published successfully!")
 
-# ── Set branch on version — use PUT (create/update) not PATCH ────────────────
-branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/versions/{CONSUMER_VERSION}"
-branch_response = requests.put(
-    branch_url,
-    json={"branch": CONSUMER_BRANCH},
-    headers=headers,
-)
+# ── Associate version with branch (correct Pact Broker branches API) ─────────
+# PUT /pacticipants/{name}/branches/{branch}/versions/{version}
+# URL structure creates the association — no body needed.
+branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/branches/{CONSUMER_BRANCH}/versions/{CONSUMER_VERSION}"
+branch_response = requests.put(branch_url, headers=headers)
 if branch_response.status_code in (200, 201):
-    print(f"[SUCCESS] Version branch set to '{CONSUMER_BRANCH}' (HTTP {branch_response.status_code})")
+    print(f"[SUCCESS] Version {CONSUMER_VERSION} associated with branch '{CONSUMER_BRANCH}' (HTTP {branch_response.status_code})")
 else:
-    print(f"[WARN] Branch PUT failed: HTTP {branch_response.status_code} — {branch_response.text[:300]}")
+    print(f"[WARN] Branch association failed: HTTP {branch_response.status_code} — {branch_response.text[:300]}")
 
 # ── Set mainBranch on both pacticipants (idempotent, safe to run every time) ─
 # Tells PactFlow which branch is "main" so Applications dashboard shows the badge.
