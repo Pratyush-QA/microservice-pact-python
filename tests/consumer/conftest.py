@@ -2,25 +2,15 @@
 Auto-publish Pact contract to PactFlow after consumer tests pass.
 =================================================================
 This conftest.py runs automatically when pytest finishes the consumer
-test session. If all tests passed AND PACT_BROKER_TOKEN are set, it
+test session. If all tests passed AND PACT_BROKER_TOKEN is set, it
 publishes the generated contract JSON to PactFlow automatically.
 
-WHY conftest.py and not a fixture?
-  Pytest_sessionfinish is a hook that runs AFTER all tests complete.
-  It gives us the final exit status (0 = all passed, 1 = some failed).
-  We only publish when tests actually passed — no point publishing a
-  broken contract.
-
 HOW it works:
-  1. Pytest runs all tests in tests/consumer/
-  2. Pactman writes contract to pacts/BooksCatalogue-CoursesCatalogue-pact.json
-  3. Pytest_sessionfinish fires
-  4. If exitstatus == 0 (all passed) → publish to PactFlow automatically
+  1. pytest runs all tests in tests/consumer/
+  2. pactman writes contract to pacts/BooksCatalogue-CoursesCatalogue-pact.json
+  3. pytest_sessionfinish hook fires after all tests complete
+  4. If exitstatus == 0 (all passed) → publish to PactFlow + set branch
   5. If exitstatus != 0 (some failed) → skip publish, print warning
-
-RESULT:
-  Before: pytest tests/consumer/ -v then python scripts/publish_pact.py
-  After:  pytest tests/consumer/ -v (publish happens automatically)
 """
 
 import json
@@ -28,22 +18,17 @@ import os
 import requests
 
 
-PACT_BROKER_URL  = "https://deepintent.pactflow.io"
-PACT_FILE        = "pacts/BooksCatalogue-CoursesCatalogue-pact.json"
+PACT_BROKER_URL = "https://deepintent.pactflow.io"
+PACT_FILE       = "pacts/BooksCatalogue-CoursesCatalogue-pact.json"
 
 
 def pytest_sessionfinish(session, exitstatus):
     """
     Called by pytest automatically after the entire test session ends.
 
-    Exitstatus:
-      0 → all tests passed
-      1 → some tests failed
-      2 → interrupted
-      3 → internal error
-
-    We only publish when exitstatus == 0 — contract is only valid
-    when all consumer tests have passed.
+    exitstatus:
+      0 → all tests passed  → publish contract
+      non-0 → tests failed  → skip publish
     """
 
     # Only publish if all consumer tests passed
@@ -66,24 +51,17 @@ def pytest_sessionfinish(session, exitstatus):
 
     # Only publish if a pact file was generated
     if not os.path.exists(PACT_FILE):
-        print(
-            f"\n[PactFlow] Skipping auto-publish — pact file not found: {PACT_FILE}"
-        )
+        print(f"\n[PactFlow] Skipping auto-publish — pact file not found: {PACT_FILE}")
         return
 
-    # ── Publish to PactFlow ───────────────────────────────────────────────────
+    # ── Load pact JSON ────────────────────────────────────────────────────────
     with open(PACT_FILE) as f:
         pact = json.load(f)
 
-    consumer = pact["consumer"]["name"]   # "BooksCatalogue"
-    provider = pact["provider"]["name"]   # "CoursesCatalogue"
+    consumer = pact["consumer"]["name"]                        # "BooksCatalogue"
+    provider = pact["provider"]["name"]                        # "CoursesCatalogue"
     version  = os.environ.get("CONSUMER_VERSION", "1.0.3")
     branch   = os.environ.get("CONSUMER_BRANCH", "main")
-
-    url = (
-        f"{PACT_BROKER_URL}/pacts/provider/{provider}"
-        f"/consumer/{consumer}/version/{version}"
-    )
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -96,6 +74,8 @@ def pytest_sessionfinish(session, exitstatus):
     print(f"  Version  : {version}")
     print(f"  Branch   : {branch}")
 
+    # ── Step 1: Publish contract to PactFlow ──────────────────────────────────
+    url = f"{PACT_BROKER_URL}/pacts/provider/{provider}/consumer/{consumer}/version/{version}"
     response = requests.put(url, json=pact, headers=headers)
 
     if response.status_code not in (200, 201):
@@ -105,20 +85,18 @@ def pytest_sessionfinish(session, exitstatus):
 
     print(f"[PactFlow] ✅ Contract published successfully!")
 
-    # ── Associate version with branch (correct Pact Broker branches API) ────
-    # The correct endpoint is: PUT /pacticipants/{name}/branches/{branch}/versions/{version}
-    # The URL structure itself creates the association — no body needed.
-    # Previous attempts (/versions/{v} with {"branch":...}) returned 200 but did nothing.
+    # ── Step 2: Associate consumer version with branch ────────────────────────
+    # Uses the Pact Broker branches API — URL structure creates the association.
     branch_url = f"{PACT_BROKER_URL}/pacticipants/{consumer}/branches/{branch}/versions/{version}"
     branch_res = requests.put(branch_url, headers=headers)
     if branch_res.status_code in (200, 201):
-        print(f"[PactFlow] ✅ Version {version} associated with branch '{branch}' (HTTP {branch_res.status_code})")
+        print(f"[PactFlow] ✅ Version {version} associated with branch '{branch}'")
     else:
         print(f"[PactFlow] ⚠ Branch association failed: HTTP {branch_res.status_code} — {branch_res.text[:300]}")
 
-    # ── Set mainBranch on pacticipant (one-time, idempotent) ─────────────────
+    # ── Step 3: Set mainBranch on both pacticipants ───────────────────────────
     # Tells PactFlow which branch is "main" so the Applications dashboard
-    # can display "main branch version: 1.0.1" instead of "not found".
+    # shows "main branch version: {version}" instead of "not found".
     for participant in [consumer, provider]:
         mb_url = f"{PACT_BROKER_URL}/pacticipants/{participant}"
         mb_res = requests.patch(
@@ -129,9 +107,6 @@ def pytest_sessionfinish(session, exitstatus):
         if mb_res.status_code in (200, 201):
             print(f"[PactFlow] ✅ mainBranch='{branch}' for {participant}")
         else:
-            print(f"[PactFlow] ⚠ mainBranch failed for {participant}: HTTP {mb_res.status_code} — {mb_res.text[:300]}")
+            print(f"[PactFlow] ⚠ mainBranch failed for {participant}: HTTP {mb_res.status_code}")
 
-    print(
-        f"  View at: {PACT_BROKER_URL}/pacts/provider/"
-        f"{provider}/consumer/{consumer}/latest"
-    )
+    print(f"  View at: {PACT_BROKER_URL}/pacts/provider/{provider}/consumer/{consumer}/latest")
